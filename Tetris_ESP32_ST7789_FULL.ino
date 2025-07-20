@@ -19,7 +19,7 @@ const int blockSize = 16;
 const int widthBlocks = 10;
 const int heightBlocks = 18;
 const int offsetX = 0;
-const int infoPanelX = widthBlocks * blockSize + 1; // 160
+const int infoPanelX = widthBlocks * blockSize + 1;
 int screen[widthBlocks][heightBlocks] = {0};
 
 int score = 0;
@@ -30,13 +30,16 @@ int fallDelay = 2000;
 bool gameOver = false;
 bool paused = false;
 
-#define BTN_LEFT    32
-#define BTN_RIGHT   33
-#define BTN_DOWN    25
-#define BTN_ROT_L   26
-#define BTN_ROT_R   27
-#define BTN_DROP    14
-#define BTN_PAUSE   12
+// Матрица кнопок
+int rows[] = {32, 26, 27};
+int cols[] = {14, 25, 33};
+
+// RESET
+#define RESET_ROW 26
+#define RESET_COL 13
+
+// Спикер
+#define SPEAKER_PIN 4
 
 Block blocks[7] = {
   {{{{0,-1},{0,0},{0,1},{0,2}},{{-1,0},{0,0},{1,0},{2,0}}}, 2, ST77XX_RED},
@@ -53,6 +56,25 @@ int rot;
 Block current;
 Block next;
 
+// --- Функции звука ---
+void playClick() {
+  tone(SPEAKER_PIN, 1000, 50);  // короткий клик
+}
+void playDrop() {
+  tone(SPEAKER_PIN, 200, 150);  // низкий звук падения
+}
+
+// --- Проверка кнопки ---
+bool isButtonPressed(int rowPin, int colPin) {
+  for (int r : rows) digitalWrite(r, HIGH);
+  digitalWrite(rowPin, LOW);
+  delayMicroseconds(3);
+  bool pressed = (digitalRead(colPin) == LOW);
+  digitalWrite(rowPin, HIGH);
+  return pressed;
+}
+
+// --- Игровая логика ---
 bool getBlocks(Block block, Point pos, int rot, Point* out) {
   bool valid = true;
   for (int i = 0; i < 4; i++) {
@@ -109,13 +131,6 @@ void drawInfoPanel() {
   tft.setCursor(infoPanelX + 5, 195);
   tft.setTextColor(ST77XX_WHITE);
   tft.print(score);
-
-  if (paused) {
-    tft.setCursor(50, 140);
-    tft.setTextColor(ST77XX_RED);
-    tft.setTextSize(2);
-    tft.println("PAUSE");
-  }
 }
 
 void placeBlock(Block block, Point pos, int rot, bool value) {
@@ -165,16 +180,46 @@ void dropInstant() {
   while (canMove(0, 1)) pos.y++;
 }
 
+void resetGame() {
+  for (int x = 0; x < widthBlocks; x++)
+    for (int y = 0; y < heightBlocks; y++)
+      screen[x][y] = 0;
+
+  score = 0;
+  linesCleared = 0;
+  level = 1;
+  fallDelay = 2000;
+  gameOver = false;
+  paused = false;
+
+  next = blocks[random(7)];
+  spawnBlock();
+  drawScreen();
+  drawInfoPanel();
+}
+
 void readButtons() {
-  if (digitalRead(BTN_PAUSE) == LOW) { paused = !paused; delay(300); return; }
+  // RESET
+  for (int r : rows) digitalWrite(r, HIGH);
+  digitalWrite(RESET_ROW, LOW);
+  delayMicroseconds(3);
+  if (digitalRead(RESET_COL) == LOW) {
+    resetGame();
+    delay(500);
+    return;
+  }
+  digitalWrite(RESET_ROW, HIGH);
+
+  if (isButtonPressed(32, 33)) { paused = !paused; playClick(); delay(300); return; }
   if (paused) return;
   placeBlock(current, pos, rot, false);
-  if (digitalRead(BTN_LEFT) == LOW && canMove(-1, 0)) { pos.x--; delay(100); }
-  if (digitalRead(BTN_RIGHT) == LOW && canMove(1, 0))  { pos.x++; delay(100); }
-  if (digitalRead(BTN_DOWN) == LOW && canMove(0, 1))   { pos.y++; delay(100); }
-  if (digitalRead(BTN_ROT_L) == LOW)                   { rot = (rot + current.rotations - 1) % current.rotations; delay(150); }
-  if (digitalRead(BTN_ROT_R) == LOW)                   { rot = (rot + 1) % current.rotations; delay(150); }
-  if (digitalRead(BTN_DROP) == LOW)                    { dropInstant(); delay(150); }
+
+  if (isButtonPressed(27, 14) && canMove(-1, 0)) { pos.x--; playClick(); delay(100); }
+  if (isButtonPressed(26, 27) && canMove(1, 0))  { pos.x++; playClick(); delay(100); }
+  if (isButtonPressed(32, 14) && canMove(0, 1))  { pos.y++; playClick(); delay(100); }
+  if (isButtonPressed(25, 26))                   { rot = (rot + 1) % current.rotations; playClick(); delay(150); }
+  if (isButtonPressed(32, 26))                   { dropInstant(); playClick(); delay(150); }
+
   placeBlock(current, pos, rot, true);
   drawScreen();
 }
@@ -185,13 +230,11 @@ void setup() {
   tft.setRotation(0);
   tft.fillScreen(ST77XX_BLACK);
 
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_DOWN, INPUT_PULLUP);
-  pinMode(BTN_ROT_L, INPUT_PULLUP);
-  pinMode(BTN_ROT_R, INPUT_PULLUP);
-  pinMode(BTN_DROP, INPUT_PULLUP);
-  pinMode(BTN_PAUSE, INPUT_PULLUP);
+  for (int r : rows) pinMode(r, OUTPUT);
+  for (int c : cols) pinMode(c, INPUT_PULLUP);
+  pinMode(RESET_COL, INPUT_PULLUP);
+
+  pinMode(SPEAKER_PIN, OUTPUT);
 
   next = blocks[random(7)];
   spawnBlock();
@@ -200,12 +243,20 @@ void setup() {
 }
 
 void loop() {
+  if (paused) {
+    tft.setCursor(50, 140);
+    tft.setTextColor(ST77XX_RED);
+    tft.setTextSize(2);
+    tft.println("PAUSE");
+  }
   if (gameOver) {
     tft.setCursor(60, 140);
     tft.setTextColor(ST77XX_RED);
     tft.setTextSize(2);
     tft.println("GAME OVER");
-    while (1);
+    while (1) {
+      if (isButtonPressed(RESET_ROW, RESET_COL)) { resetGame(); break; }
+    }
   }
   readButtons();
   if (!paused && millis() - lastFall > fallDelay) {
@@ -217,6 +268,7 @@ void loop() {
       clearLines();
       drawInfoPanel();
       spawnBlock();
+      playDrop();
     }
     placeBlock(current, pos, rot, true);
     drawScreen();
