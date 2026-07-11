@@ -55,3 +55,24 @@ Point ghostPosition(const Block& block, Point pos, int rot) {
   while (getBlocks(block, {p.x, p.y + 1}, rot, test)) p.y++;
   return p;
 }
+
+struct Bag {
+  int order[7];
+  int index;
+};
+
+void refillBag(Bag* bag, int (*randInt)(int)) {
+  for (int i = 0; i < 7; i++) bag->order[i] = i;
+  for (int i = 6; i > 0; i--) {
+    int j = randInt(i + 1);
+    int tmp = bag->order[i];
+    bag->order[i] = bag->order[j];
+    bag->order[j] = tmp;
+  }
+  bag->index = 0;
+}
+
+int nextFromBag(Bag* bag, int (*randInt)(int)) {
+  if (bag->index >= 7) refillBag(bag, randInt);
+  return bag->order[bag->index++];
+}

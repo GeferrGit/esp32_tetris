@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include "../../game_logic.h"
 
 static void resetScreen() {
@@ -97,6 +98,32 @@ static void test_ghostPosition_lands_on_stack() {
   assert(ghost.y == 8);
 }
 
+static int stdRandInt(int n) { return rand() % n; }
+
+static void test_refillBag_produces_permutation() {
+  srand(99);
+  Bag bag;
+  refillBag(&bag, stdRandInt);
+  bool seen[7] = {false,false,false,false,false,false,false};
+  for (int i = 0; i < 7; i++) {
+    assert(bag.order[i] >= 0 && bag.order[i] < 7);
+    assert(!seen[bag.order[i]]);
+    seen[bag.order[i]] = true;
+  }
+  assert(bag.index == 0);
+}
+
+static void test_bag_two_cycles_each_piece_exactly_twice() {
+  srand(7);
+  Bag bag = {{0,0,0,0,0,0,0}, 7}; // index=7 forces a refill on the first draw
+  int counts[7] = {0,0,0,0,0,0,0};
+  for (int i = 0; i < 14; i++) {
+    int piece = nextFromBag(&bag, stdRandInt);
+    counts[piece]++;
+  }
+  for (int i = 0; i < 7; i++) assert(counts[i] == 2);
+}
+
 int main() {
   test_getBlocks_valid_empty_position();
   test_getBlocks_rejects_out_of_bounds_left();
@@ -107,6 +134,8 @@ int main() {
   test_tryRotate_fails_when_fully_blocked();
   test_ghostPosition_lands_on_floor();
   test_ghostPosition_lands_on_stack();
+  test_refillBag_produces_permutation();
+  test_bag_two_cycles_each_piece_exactly_twice();
   printf("All game_logic tests passed.\n");
   return 0;
 }
