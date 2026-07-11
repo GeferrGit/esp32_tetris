@@ -1,6 +1,18 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <SPI.h>
+#include "game_logic.h"
+
+const uint16_t blockColor565[8] = {
+  ST77XX_BLACK,   // 0: empty cell
+  ST77XX_RED,     // 1: I piece
+  ST77XX_YELLOW,  // 2: O piece
+  ST77XX_GREEN,   // 3: T piece
+  ST77XX_BLUE,    // 4: S piece
+  ST77XX_CYAN,    // 5: Z piece
+  ST77XX_MAGENTA, // 6: J piece
+  ST77XX_ORANGE   // 7: L piece
+};
 
 #define TFT_CS     5
 #define TFT_DC     16
@@ -8,19 +20,9 @@
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
-struct Point { int x, y; };
-struct Block {
-  Point shape[4][4];
-  int rotations;
-  int color;
-};
-
 const int blockSize = 16;
-const int widthBlocks = 10;
-const int heightBlocks = 18;
 const int offsetX = 0;
 const int infoPanelX = widthBlocks * blockSize + 1;
-int screen[widthBlocks][heightBlocks] = {0};
 
 int score = 0;
 int linesCleared = 0;
@@ -40,16 +42,6 @@ int cols[] = {14, 25, 33};
 
 // Спикер
 #define SPEAKER_PIN 4
-
-Block blocks[7] = {
-  {{{{0,-1},{0,0},{0,1},{0,2}},{{-1,0},{0,0},{1,0},{2,0}}}, 2, ST77XX_RED},
-  {{{{0,0},{1,0},{0,1},{1,1}}}, 1, ST77XX_YELLOW},
-  {{{{-1,0},{0,0},{1,0},{0,-1}},{{0,-1},{0,0},{0,1},{1,0}},{{-1,0},{0,0},{1,0},{0,1}},{{0,-1},{0,0},{0,1},{-1,0}}}, 4, ST77XX_GREEN},
-  {{{{-1,0},{0,0},{0,-1},{1,-1}},{{0,-1},{0,0},{1,0},{1,1}}}, 2, ST77XX_BLUE},
-  {{{{-1,-1},{0,-1},{0,0},{1,0}},{{1,-1},{1,0},{0,0},{0,1}}}, 2, ST77XX_CYAN},
-  {{{{-1,0},{0,0},{1,0},{1,-1}},{{0,-1},{0,0},{0,1},{1,1}},{{-1,0},{0,0},{1,0},{-1,1}},{{0,-1},{0,0},{0,1},{-1,-1}}}, 4, ST77XX_MAGENTA},
-  {{{{-1,0},{0,0},{1,0},{-1,-1}},{{0,-1},{0,0},{0,1},{1,-1}},{{-1,0},{0,0},{1,0},{1,1}},{{0,-1},{0,0},{0,1},{-1,1}}}, 4, ST77XX_ORANGE}
-};
 
 Point pos;
 int rot;
@@ -74,20 +66,8 @@ bool isButtonPressed(int rowPin, int colPin) {
   return pressed;
 }
 
-// --- Игровая логика ---
-bool getBlocks(Block block, Point pos, int rot, Point* out) {
-  bool valid = true;
-  for (int i = 0; i < 4; i++) {
-    Point p = { pos.x + block.shape[rot][i].x, pos.y + block.shape[rot][i].y };
-    if (p.x < 0 || p.x >= widthBlocks || p.y < 0 || p.y >= heightBlocks || screen[p.x][p.y])
-      valid = false;
-    out[i] = p;
-  }
-  return valid;
-}
-
-void drawBlock(int x, int y, uint16_t color) {
-  tft.fillRect(offsetX + x * blockSize, y * blockSize, blockSize - 1, blockSize - 1, color);
+void drawBlock(int x, int y, int colorId) {
+  tft.fillRect(offsetX + x * blockSize, y * blockSize, blockSize - 1, blockSize - 1, blockColor565[colorId]);
 }
 
 void drawScreen() {
@@ -105,7 +85,7 @@ void drawInfoPanel() {
   Point preview[4];
   getBlocks(next, {0, 0}, 0, preview);
   for (int i = 0; i < 4; i++) {
-    tft.fillRect(infoPanelX + 10 + preview[i].x * 10, 20 + preview[i].y * 10, 9, 9, next.color);
+    tft.fillRect(infoPanelX + 10 + preview[i].x * 10, 20 + preview[i].y * 10, 9, 9, blockColor565[next.color]);
   }
 
   tft.drawRect(infoPanelX, 65, 78, 50, ST77XX_WHITE);
