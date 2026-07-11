@@ -56,6 +56,9 @@ int arduinoRandInt(int n) { return random(n); }
 void playClick() {
   tone(SPEAKER_PIN, 1000, 50);  // короткий клик
 }
+void playRotate() {
+  tone(SPEAKER_PIN, 1400, 50);
+}
 void playDrop() {
   tone(SPEAKER_PIN, 200, 150);  // низкий звук падения
 }
@@ -98,6 +101,15 @@ void drawScreen() {
   for (int x = 0; x < widthBlocks; x++)
     for (int y = 0; y < heightBlocks; y++)
       drawBlock(x, y, screen[x][y]);
+}
+
+void drawGhost() {
+  Point ghost = ghostPosition(current, pos, rot);
+  if (ghost.y == pos.y) return; // already resting, no separate ghost needed
+  Point cells[4];
+  getBlocks(current, ghost, rot, cells);
+  for (int i = 0; i < 4; i++)
+    tft.drawRect(offsetX + cells[i].x * blockSize, cells[i].y * blockSize, blockSize - 1, blockSize - 1, ST77XX_WHITE);
 }
 
 void drawInfoPanel() {
@@ -201,11 +213,21 @@ void readButtons() {
   if (isButtonPressed(27, 14) && canMove(-1, 0)) { pos.x--; playClick(); delay(100); }
   if (isButtonPressed(26, 14) && canMove(1, 0))  { pos.x++; playClick(); delay(100); }
   if (isButtonPressed(32, 14) && canMove(0, 1))  { pos.y++; playClick(); delay(100); }
-  if (isButtonPressed(26, 25))                   { rot = (rot + 1) % current.rotations; playClick(); delay(150); }
+  if (isButtonPressed(26, 25)) {
+    int newRot;
+    Point newPos;
+    if (tryRotate(current, pos, rot, &newRot, &newPos)) {
+      rot = newRot;
+      pos = newPos;
+      playRotate();
+    }
+    delay(150);
+  }
   if (isButtonPressed(27, 33))                   { dropInstant(); playClick(); delay(150); }
 
   placeBlock(current, pos, rot, true);
   drawScreen();
+  drawGhost();
 }
 
 void setup() {
@@ -265,5 +287,6 @@ void loop() {
     }
     placeBlock(current, pos, rot, true);
     drawScreen();
+    drawGhost();
   }
 }
