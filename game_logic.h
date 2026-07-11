@@ -11,7 +11,7 @@ struct Block {
 const int widthBlocks = 10;
 const int heightBlocks = 18;
 
-int screen[widthBlocks][heightBlocks] = {0};
+int screen[widthBlocks][heightBlocks] = {};
 
 Block blocks[7] = {
   {{{{0,-1},{0,0},{0,1},{0,2}},{{-1,0},{0,0},{1,0},{2,0}}}, 2, 1},
