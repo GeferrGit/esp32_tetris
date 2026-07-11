@@ -76,3 +76,23 @@ int nextFromBag(Bag* bag, int (*randInt)(int)) {
   if (bag->index >= 7) refillBag(bag, randInt);
   return bag->order[bag->index++];
 }
+
+int scoreForLines(int n) {
+  switch (n) {
+    case 1: return 100;
+    case 2: return 300;
+    case 3: return 500;
+    case 4: return 800;
+    default: return 0;
+  }
+}
+
+int levelForLines(int totalLines) {
+  int lvl = 1 + totalLines / 10;
+  return lvl > 10 ? 10 : lvl;
+}
+
+int fallDelayForLevel(int level) {
+  int d = 2000 - (level - 1) * 200;
+  return d < 200 ? 200 : d;
+}

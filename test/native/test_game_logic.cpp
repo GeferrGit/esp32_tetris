@@ -124,6 +124,30 @@ static void test_bag_two_cycles_each_piece_exactly_twice() {
   for (int i = 0; i < 7; i++) assert(counts[i] == 2);
 }
 
+static void test_scoreForLines_table() {
+  assert(scoreForLines(0) == 0);
+  assert(scoreForLines(1) == 100);
+  assert(scoreForLines(2) == 300);
+  assert(scoreForLines(3) == 500);
+  assert(scoreForLines(4) == 800);
+}
+
+static void test_levelForLines_progression() {
+  assert(levelForLines(0) == 1);
+  assert(levelForLines(9) == 1);
+  assert(levelForLines(10) == 2);
+  assert(levelForLines(19) == 2);
+  assert(levelForLines(20) == 3);
+  assert(levelForLines(1000) == 10);
+}
+
+static void test_fallDelayForLevel_progression_and_floor() {
+  assert(fallDelayForLevel(1) == 2000);
+  assert(fallDelayForLevel(2) == 1800);
+  assert(fallDelayForLevel(10) == 200);
+  assert(fallDelayForLevel(50) == 200);
+}
+
 int main() {
   test_getBlocks_valid_empty_position();
   test_getBlocks_rejects_out_of_bounds_left();
@@ -136,6 +160,9 @@ int main() {
   test_ghostPosition_lands_on_stack();
   test_refillBag_produces_permutation();
   test_bag_two_cycles_each_piece_exactly_twice();
+  test_scoreForLines_table();
+  test_levelForLines_progression();
+  test_fallDelayForLevel_progression_and_floor();
   printf("All game_logic tests passed.\n");
   return 0;
 }
