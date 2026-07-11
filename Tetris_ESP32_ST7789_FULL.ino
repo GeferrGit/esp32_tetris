@@ -36,6 +36,20 @@ bool paused = false;
 int rows[] = {32, 26, 27};
 int cols[] = {14, 25, 33};
 
+// Non-blocking button debounce
+enum Action { ACT_PAUSE, ACT_LEFT, ACT_RIGHT, ACT_DOWN, ACT_ROTATE, ACT_HARDDROP, ACT_RESET, ACT_COUNT };
+unsigned long lastActionTime[ACT_COUNT] = {0};
+const unsigned long actionCooldown[ACT_COUNT] = {300, 100, 100, 100, 150, 150, 500};
+
+bool actionReady(Action a) {
+  unsigned long now = millis();
+  if (now - lastActionTime[a] >= actionCooldown[a]) {
+    lastActionTime[a] = now;
+    return true;
+  }
+  return false;
+}
+
 // RESET
 #define RESET_ROW 26
 #define RESET_COL 13
@@ -199,21 +213,20 @@ void readButtons() {
   for (int r : rows) digitalWrite(r, HIGH);
   digitalWrite(RESET_ROW, LOW);
   delayMicroseconds(3);
-  if (digitalRead(RESET_COL) == LOW) {
+  if (digitalRead(RESET_COL) == LOW && actionReady(ACT_RESET)) {
     resetGame();
-    delay(500);
     return;
   }
   digitalWrite(RESET_ROW, HIGH);
 
-  if (isButtonPressed(32, 33)) { paused = !paused; playClick(); delay(300); return; }
+  if (isButtonPressed(32, 33) && actionReady(ACT_PAUSE)) { paused = !paused; playClick(); return; }
   if (paused) return;
   placeBlock(current, pos, rot, false);
 
-  if (isButtonPressed(27, 14) && canMove(-1, 0)) { pos.x--; playClick(); delay(100); }
-  if (isButtonPressed(26, 14) && canMove(1, 0))  { pos.x++; playClick(); delay(100); }
-  if (isButtonPressed(32, 14) && canMove(0, 1))  { pos.y++; playClick(); delay(100); }
-  if (isButtonPressed(26, 25)) {
+  if (isButtonPressed(27, 14) && canMove(-1, 0) && actionReady(ACT_LEFT))  { pos.x--; playClick(); }
+  if (isButtonPressed(26, 14) && canMove(1, 0)  && actionReady(ACT_RIGHT)) { pos.x++; playClick(); }
+  if (isButtonPressed(32, 14) && canMove(0, 1)  && actionReady(ACT_DOWN))  { pos.y++; playClick(); }
+  if (isButtonPressed(26, 25) && actionReady(ACT_ROTATE)) {
     int newRot;
     Point newPos;
     if (tryRotate(current, pos, rot, &newRot, &newPos)) {
@@ -221,9 +234,8 @@ void readButtons() {
       pos = newPos;
       playRotate();
     }
-    delay(150);
   }
-  if (isButtonPressed(27, 33))                   { dropInstant(); playClick(); delay(150); }
+  if (isButtonPressed(27, 33) && actionReady(ACT_HARDDROP)) { dropInstant(); playClick(); }
 
   placeBlock(current, pos, rot, true);
   drawScreen();
