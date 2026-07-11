@@ -41,11 +41,55 @@ static void test_getBlocks_rejects_collision_with_occupied_cell() {
   assert(!valid);
 }
 
+static void test_tryRotate_succeeds_in_open_space() {
+  resetScreen();
+  int outRot;
+  Point outPos;
+  bool rotated = tryRotate(blocks[2], {5, 5}, 0, &outRot, &outPos); // T piece, open board
+  assert(rotated);
+  assert(outRot == 1);
+  assert(outPos.x == 5 && outPos.y == 5);
+}
+
+static void test_tryRotate_wall_kicks_off_left_edge() {
+  resetScreen();
+  int outRot;
+  Point outPos;
+  // I piece standing vertically flush against the left wall; rotating to
+  // horizontal at the same x would go out of bounds and needs a kick.
+  bool rotated = tryRotate(blocks[0], {0, 5}, 0, &outRot, &outPos);
+  assert(rotated);
+  assert(outRot == 1);
+  assert(outPos.x == 1 && outPos.y == 5);
+}
+
+static void test_tryRotate_fails_when_fully_blocked() {
+  resetScreen();
+  for (int x = 0; x < widthBlocks; x++)
+    for (int y = 0; y < heightBlocks; y++)
+      screen[x][y] = 1;
+  Point pos = {5, 5};
+  int rot = 0;
+  for (int i = 0; i < 4; i++) {
+    Point p = { pos.x + blocks[2].shape[rot][i].x, pos.y + blocks[2].shape[rot][i].y };
+    screen[p.x][p.y] = 0; // clear only the T piece's own current footprint
+  }
+  int outRot = -999;
+  Point outPos = {-999, -999};
+  bool rotated = tryRotate(blocks[2], pos, rot, &outRot, &outPos);
+  assert(!rotated);
+  assert(outRot == -999);
+  assert(outPos.x == -999 && outPos.y == -999);
+}
+
 int main() {
   test_getBlocks_valid_empty_position();
   test_getBlocks_rejects_out_of_bounds_left();
   test_getBlocks_rejects_out_of_bounds_right();
   test_getBlocks_rejects_collision_with_occupied_cell();
+  test_tryRotate_succeeds_in_open_space();
+  test_tryRotate_wall_kicks_off_left_edge();
+  test_tryRotate_fails_when_fully_blocked();
   printf("All game_logic tests passed.\n");
   return 0;
 }

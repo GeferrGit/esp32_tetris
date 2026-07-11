@@ -33,3 +33,18 @@ bool getBlocks(const Block& block, Point pos, int rot, Point out[4]) {
   }
   return valid;
 }
+
+bool tryRotate(const Block& block, Point pos, int rot, int* outRot, Point* outPos) {
+  int newRot = (rot + 1) % block.rotations;
+  const Point offsets[4] = {{0, 0}, {-1, 0}, {1, 0}, {0, -1}};
+  Point test[4];
+  for (int i = 0; i < 4; i++) {
+    Point tryPos = { pos.x + offsets[i].x, pos.y + offsets[i].y };
+    if (getBlocks(block, tryPos, newRot, test)) {
+      *outRot = newRot;
+      *outPos = tryPos;
+      return true;
+    }
+  }
+  return false;
+}
