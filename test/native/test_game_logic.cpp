@@ -148,6 +148,37 @@ static void test_fallDelayForLevel_progression_and_floor() {
   assert(fallDelayForLevel(50) == 200);
 }
 
+static void test_clearLinesLogic_no_full_lines() {
+  resetScreen();
+  screen[0][17] = 1;
+  int cleared = clearLinesLogic();
+  assert(cleared == 0);
+  assert(screen[0][17] == 1);
+}
+
+static void test_clearLinesLogic_clears_single_full_line() {
+  resetScreen();
+  for (int x = 0; x < widthBlocks; x++) screen[x][17] = 1;
+  screen[3][16] = 2;
+  int cleared = clearLinesLogic();
+  assert(cleared == 1);
+  assert(screen[3][17] == 2);
+  for (int x = 0; x < widthBlocks; x++)
+    if (x != 3) assert(screen[x][17] == 0);
+}
+
+static void test_clearLinesLogic_clears_multiple_simultaneous_lines() {
+  resetScreen();
+  for (int x = 0; x < widthBlocks; x++) {
+    screen[x][16] = 1;
+    screen[x][17] = 1;
+  }
+  screen[5][15] = 3;
+  int cleared = clearLinesLogic();
+  assert(cleared == 2);
+  assert(screen[5][17] == 3);
+}
+
 int main() {
   test_getBlocks_valid_empty_position();
   test_getBlocks_rejects_out_of_bounds_left();
@@ -163,6 +194,9 @@ int main() {
   test_scoreForLines_table();
   test_levelForLines_progression();
   test_fallDelayForLevel_progression_and_floor();
+  test_clearLinesLogic_no_full_lines();
+  test_clearLinesLogic_clears_single_full_line();
+  test_clearLinesLogic_clears_multiple_simultaneous_lines();
   printf("All game_logic tests passed.\n");
   return 0;
 }

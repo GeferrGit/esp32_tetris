@@ -96,3 +96,21 @@ int fallDelayForLevel(int level) {
   int d = 2000 - (level - 1) * 200;
   return d < 200 ? 200 : d;
 }
+
+int clearLinesLogic() {
+  int cleared = 0;
+  for (int y = heightBlocks - 1; y >= 0; y--) {
+    bool full = true;
+    for (int x = 0; x < widthBlocks; x++)
+      if (!screen[x][y]) full = false;
+    if (full) {
+      for (int yy = y; yy > 0; yy--)
+        for (int x = 0; x < widthBlocks; x++)
+          screen[x][yy] = screen[x][yy - 1];
+      for (int x = 0; x < widthBlocks; x++) screen[x][0] = 0;
+      cleared++;
+      y++;
+    }
+  }
+  return cleared;
+}
