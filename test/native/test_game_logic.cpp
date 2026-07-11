@@ -82,6 +82,21 @@ static void test_tryRotate_fails_when_fully_blocked() {
   assert(outPos.x == -999 && outPos.y == -999);
 }
 
+static void test_ghostPosition_lands_on_floor() {
+  resetScreen();
+  Point ghost = ghostPosition(blocks[1], {4, 0}, 0);
+  Point cells[4];
+  assert(getBlocks(blocks[1], ghost, 0, cells));
+  assert(!getBlocks(blocks[1], {ghost.x, ghost.y + 1}, 0, cells));
+}
+
+static void test_ghostPosition_lands_on_stack() {
+  resetScreen();
+  for (int x = 0; x < widthBlocks; x++) screen[x][10] = 1;
+  Point ghost = ghostPosition(blocks[1], {4, 0}, 0);
+  assert(ghost.y == 8);
+}
+
 int main() {
   test_getBlocks_valid_empty_position();
   test_getBlocks_rejects_out_of_bounds_left();
@@ -90,6 +105,8 @@ int main() {
   test_tryRotate_succeeds_in_open_space();
   test_tryRotate_wall_kicks_off_left_edge();
   test_tryRotate_fails_when_fully_blocked();
+  test_ghostPosition_lands_on_floor();
+  test_ghostPosition_lands_on_stack();
   printf("All game_logic tests passed.\n");
   return 0;
 }

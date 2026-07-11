@@ -48,3 +48,10 @@ bool tryRotate(const Block& block, Point pos, int rot, int* outRot, Point* outPo
   }
   return false;
 }
+
+Point ghostPosition(const Block& block, Point pos, int rot) {
+  Point p = pos;
+  Point test[4];
+  while (getBlocks(block, {p.x, p.y + 1}, rot, test)) p.y++;
+  return p;
+}
