@@ -137,7 +137,9 @@ void drawScreen() {
 }
 
 void drawGhost() {
+  placeBlock(current, pos, rot, false);
   Point ghost = ghostPosition(current, pos, rot);
+  placeBlock(current, pos, rot, true);
   if (ghost.y == pos.y) return; // already resting, no separate ghost needed
   Point cells[4];
   getBlocks(current, ghost, rot, cells);
@@ -248,6 +250,7 @@ void resetGame() {
   linesCleared = 0;
   level = 1;
   fallDelay = 2000;
+  lastFall = millis();
 
   pieceBag.index = 7; // start each new game with a fresh, fair sequence
   next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];

@@ -11,9 +11,9 @@ struct Block {
 const int widthBlocks = 10;
 const int heightBlocks = 18;
 
-int screen[widthBlocks][heightBlocks] = {};
+inline int screen[widthBlocks][heightBlocks] = {};
 
-Block blocks[7] = {
+inline Block blocks[7] = {
   {{{{0,-1},{0,0},{0,1},{0,2}},{{-1,0},{0,0},{1,0},{2,0}}}, 2, 1},
   {{{{0,0},{1,0},{0,1},{1,1}}}, 1, 2},
   {{{{-1,0},{0,0},{1,0},{0,-1}},{{0,-1},{0,0},{0,1},{1,0}},{{-1,0},{0,0},{1,0},{0,1}},{{0,-1},{0,0},{0,1},{-1,0}}}, 4, 3},
@@ -23,7 +23,7 @@ Block blocks[7] = {
   {{{{-1,0},{0,0},{1,0},{-1,-1}},{{0,-1},{0,0},{0,1},{1,-1}},{{-1,0},{0,0},{1,0},{1,1}},{{0,-1},{0,0},{0,1},{-1,1}}}, 4, 7}
 };
 
-bool getBlocks(const Block& block, Point pos, int rot, Point out[4]) {
+inline bool getBlocks(const Block& block, Point pos, int rot, Point out[4]) {
   bool valid = true;
   for (int i = 0; i < 4; i++) {
     Point p = { pos.x + block.shape[rot][i].x, pos.y + block.shape[rot][i].y };
@@ -34,7 +34,7 @@ bool getBlocks(const Block& block, Point pos, int rot, Point out[4]) {
   return valid;
 }
 
-bool tryRotate(const Block& block, Point pos, int rot, int* outRot, Point* outPos) {
+inline bool tryRotate(const Block& block, Point pos, int rot, int* outRot, Point* outPos) {
   int newRot = (rot + 1) % block.rotations;
   const Point offsets[4] = {{0, 0}, {-1, 0}, {1, 0}, {0, -1}};
   Point test[4];
@@ -49,7 +49,7 @@ bool tryRotate(const Block& block, Point pos, int rot, int* outRot, Point* outPo
   return false;
 }
 
-Point ghostPosition(const Block& block, Point pos, int rot) {
+inline Point ghostPosition(const Block& block, Point pos, int rot) {
   Point p = pos;
   Point test[4];
   while (getBlocks(block, {p.x, p.y + 1}, rot, test)) p.y++;
@@ -61,7 +61,7 @@ struct Bag {
   int index;
 };
 
-void refillBag(Bag* bag, int (*randInt)(int)) {
+inline void refillBag(Bag* bag, int (*randInt)(int)) {
   for (int i = 0; i < 7; i++) bag->order[i] = i;
   for (int i = 6; i > 0; i--) {
     int j = randInt(i + 1);
@@ -72,12 +72,12 @@ void refillBag(Bag* bag, int (*randInt)(int)) {
   bag->index = 0;
 }
 
-int nextFromBag(Bag* bag, int (*randInt)(int)) {
+inline int nextFromBag(Bag* bag, int (*randInt)(int)) {
   if (bag->index >= 7) refillBag(bag, randInt);
   return bag->order[bag->index++];
 }
 
-int scoreForLines(int n) {
+inline int scoreForLines(int n) {
   switch (n) {
     case 1: return 100;
     case 2: return 300;
@@ -87,17 +87,17 @@ int scoreForLines(int n) {
   }
 }
 
-int levelForLines(int totalLines) {
+inline int levelForLines(int totalLines) {
   int lvl = 1 + totalLines / 10;
   return lvl > 10 ? 10 : lvl;
 }
 
-int fallDelayForLevel(int level) {
+inline int fallDelayForLevel(int level) {
   int d = 2000 - (level - 1) * 200;
   return d < 200 ? 200 : d;
 }
 
-int clearLinesLogic() {
+inline int clearLinesLogic() {
   int cleared = 0;
   for (int y = heightBlocks - 1; y >= 0; y--) {
     bool full = true;
