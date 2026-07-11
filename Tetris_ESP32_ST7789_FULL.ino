@@ -29,8 +29,8 @@ int linesCleared = 0;
 int level = 1;
 unsigned long lastFall = 0;
 int fallDelay = 2000;
-bool gameOver = false;
-bool paused = false;
+enum GameState { STATE_START, STATE_PLAYING, STATE_PAUSED, STATE_GAMEOVER };
+GameState gameState = STATE_START;
 
 // Матрица кнопок
 int rows[] = {32, 26, 27};
@@ -75,6 +75,12 @@ void playRotate() {
 }
 void playDrop() {
   tone(SPEAKER_PIN, 200, 150);  // низкий звук падения
+}
+
+void playGameOver() {
+  tone(SPEAKER_PIN, 500, 100);
+  delay(120);
+  tone(SPEAKER_PIN, 350, 150);
 }
 
 void playLineClear() {
@@ -163,6 +169,37 @@ void drawInfoPanel() {
   tft.print(score);
 }
 
+void drawStartScreen() {
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setTextColor(ST77XX_YELLOW);
+  tft.setTextSize(3);
+  tft.setCursor(30, 100);
+  tft.println("TETRIS");
+  tft.setTextSize(1);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(15, 150);
+  tft.println("Press any button to start");
+}
+
+void drawPauseOverlay() {
+  tft.setCursor(50, 140);
+  tft.setTextColor(ST77XX_RED);
+  tft.setTextSize(2);
+  tft.println("PAUSE");
+}
+
+void drawGameOverScreen() {
+  tft.setCursor(40, 120);
+  tft.setTextColor(ST77XX_RED);
+  tft.setTextSize(2);
+  tft.println("GAME OVER");
+  tft.setTextSize(1);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(40, 150);
+  tft.print("Score: ");
+  tft.println(score);
+}
+
 void placeBlock(Block block, Point pos, int rot, bool value) {
   Point parts[4];
   getBlocks(block, pos, rot, parts);
@@ -176,7 +213,7 @@ void spawnBlock() {
   rot = 0;
   pos = {5, 1};
   Point test[4];
-  if (!getBlocks(current, pos, rot, test)) gameOver = true;
+  if (!getBlocks(current, pos, rot, test)) gameState = STATE_GAMEOVER;
   else placeBlock(current, pos, rot, true);
 }
 
@@ -198,14 +235,28 @@ void resetGame() {
   linesCleared = 0;
   level = 1;
   fallDelay = 2000;
-  gameOver = false;
-  paused = false;
 
   pieceBag.index = 7; // start each new game with a fresh, fair sequence
   next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];
   spawnBlock();
   drawScreen();
   drawInfoPanel();
+  gameState = STATE_PLAYING;
+}
+
+bool anyButtonPressed() {
+  for (int r : rows)
+    for (int c : cols)
+      if (isButtonPressed(r, c)) return true;
+  return isButtonPressed(RESET_ROW, RESET_COL);
+}
+
+void checkPauseButton() {
+  if (isButtonPressed(32, 33) && actionReady(ACT_PAUSE)) {
+    gameState = (gameState == STATE_PAUSED) ? STATE_PLAYING : STATE_PAUSED;
+    playClick();
+    if (gameState == STATE_PAUSED) drawPauseOverlay();
+  }
 }
 
 void readButtons() {
@@ -219,8 +270,6 @@ void readButtons() {
   }
   digitalWrite(RESET_ROW, HIGH);
 
-  if (isButtonPressed(32, 33) && actionReady(ACT_PAUSE)) { paused = !paused; playClick(); return; }
-  if (paused) return;
   placeBlock(current, pos, rot, false);
 
   if (isButtonPressed(27, 14) && canMove(-1, 0) && actionReady(ACT_LEFT))  { pos.x--; playClick(); }
@@ -246,7 +295,6 @@ void setup() {
   Serial.begin(115200);
   tft.init(240, 320);
   tft.setRotation(0);
-  tft.fillScreen(ST77XX_BLACK);
 
   for (int r : rows) pinMode(r, OUTPUT);
   for (int c : cols) pinMode(c, INPUT_PULLUP);
@@ -254,51 +302,62 @@ void setup() {
 
   pinMode(SPEAKER_PIN, OUTPUT);
 
-  next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];
-  spawnBlock();
-  drawScreen();
-  drawInfoPanel();
+  drawStartScreen();
 }
 
 void loop() {
-  if (paused) {
-    tft.setCursor(50, 140);
-    tft.setTextColor(ST77XX_RED);
-    tft.setTextSize(2);
-    tft.println("PAUSE");
-  }
-  if (gameOver) {
-    tft.setCursor(60, 140);
-    tft.setTextColor(ST77XX_RED);
-    tft.setTextSize(2);
-    tft.println("GAME OVER");
-    while (1) {
-      if (isButtonPressed(RESET_ROW, RESET_COL)) { resetGame(); break; }
-    }
-  }
-  readButtons();
-  if (!paused && millis() - lastFall > fallDelay) {
-    lastFall = millis();
-    placeBlock(current, pos, rot, false);
-    if (canMove(0, 1)) pos.y++;
-    else {
-      placeBlock(current, pos, rot, true);
-      int cleared = clearLinesLogic();
-      if (cleared > 0) {
-        int prevLevel = level;
-        score += scoreForLines(cleared);
-        linesCleared += cleared;
-        level = levelForLines(linesCleared);
-        fallDelay = fallDelayForLevel(level);
-        if (cleared == 4) playTetris(); else if (cleared > 0) playLineClear();
-        if (level != prevLevel) playLevelUp();
+  switch (gameState) {
+    case STATE_START:
+      if (anyButtonPressed()) {
+        resetGame();
       }
-      drawInfoPanel();
-      spawnBlock();
-      playDrop();
-    }
-    placeBlock(current, pos, rot, true);
-    drawScreen();
-    drawGhost();
+      break;
+
+    case STATE_PAUSED:
+      checkPauseButton();
+      break;
+
+    case STATE_GAMEOVER:
+      if (isButtonPressed(RESET_ROW, RESET_COL) && actionReady(ACT_RESET)) {
+        resetGame();
+      }
+      break;
+
+    case STATE_PLAYING:
+      checkPauseButton();
+      if (gameState != STATE_PLAYING) break;
+      readButtons();
+      if (gameState != STATE_PLAYING) break;
+      if (millis() - lastFall > fallDelay) {
+        lastFall = millis();
+        placeBlock(current, pos, rot, false);
+        if (canMove(0, 1)) {
+          pos.y++;
+        } else {
+          placeBlock(current, pos, rot, true);
+          int cleared = clearLinesLogic();
+          if (cleared > 0) {
+            int prevLevel = level;
+            score += scoreForLines(cleared);
+            linesCleared += cleared;
+            level = levelForLines(linesCleared);
+            fallDelay = fallDelayForLevel(level);
+            if (cleared == 4) playTetris(); else playLineClear();
+            if (level != prevLevel) playLevelUp();
+          }
+          drawInfoPanel();
+          spawnBlock();
+          playDrop();
+          if (gameState == STATE_GAMEOVER) {
+            drawGameOverScreen();
+            playGameOver();
+            break;
+          }
+        }
+        placeBlock(current, pos, rot, true);
+        drawScreen();
+        drawGhost();
+      }
+      break;
   }
 }
