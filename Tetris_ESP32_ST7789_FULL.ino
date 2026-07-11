@@ -215,10 +215,10 @@ void readButtons() {
   placeBlock(current, pos, rot, false);
 
   if (isButtonPressed(27, 14) && canMove(-1, 0)) { pos.x--; playClick(); delay(100); }
-  if (isButtonPressed(26, 27) && canMove(1, 0))  { pos.x++; playClick(); delay(100); }
+  if (isButtonPressed(26, 14) && canMove(1, 0))  { pos.x++; playClick(); delay(100); }
   if (isButtonPressed(32, 14) && canMove(0, 1))  { pos.y++; playClick(); delay(100); }
-  if (isButtonPressed(25, 26))                   { rot = (rot + 1) % current.rotations; playClick(); delay(150); }
-  if (isButtonPressed(32, 26))                   { dropInstant(); playClick(); delay(150); }
+  if (isButtonPressed(26, 25))                   { rot = (rot + 1) % current.rotations; playClick(); delay(150); }
+  if (isButtonPressed(27, 33))                   { dropInstant(); playClick(); delay(150); }
 
   placeBlock(current, pos, rot, true);
   drawScreen();
