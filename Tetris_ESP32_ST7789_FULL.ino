@@ -48,6 +48,10 @@ int rot;
 Block current;
 Block next;
 
+Bag pieceBag = {{0, 0, 0, 0, 0, 0, 0}, 7}; // index=7 forces a refill on first use
+
+int arduinoRandInt(int n) { return random(n); }
+
 // --- Функции звука ---
 void playClick() {
   tone(SPEAKER_PIN, 1000, 50);  // короткий клик
@@ -142,7 +146,7 @@ void placeBlock(Block block, Point pos, int rot, bool value) {
 
 void spawnBlock() {
   current = next;
-  next = blocks[random(7)];
+  next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];
   rot = 0;
   pos = {5, 1};
   Point test[4];
@@ -171,7 +175,8 @@ void resetGame() {
   gameOver = false;
   paused = false;
 
-  next = blocks[random(7)];
+  pieceBag.index = 7; // start each new game with a fresh, fair sequence
+  next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];
   spawnBlock();
   drawScreen();
   drawInfoPanel();
@@ -215,7 +220,7 @@ void setup() {
 
   pinMode(SPEAKER_PIN, OUTPUT);
 
-  next = blocks[random(7)];
+  next = blocks[nextFromBag(&pieceBag, arduinoRandInt)];
   spawnBlock();
   drawScreen();
   drawInfoPanel();
