@@ -56,6 +56,26 @@ void playDrop() {
   tone(SPEAKER_PIN, 200, 150);  // низкий звук падения
 }
 
+void playLineClear() {
+  tone(SPEAKER_PIN, 600, 60);
+  delay(70);
+  tone(SPEAKER_PIN, 900, 80);
+}
+
+void playTetris() {
+  int notes[4] = {600, 800, 1000, 1300};
+  for (int i = 0; i < 4; i++) {
+    tone(SPEAKER_PIN, notes[i], 70);
+    delay(80);
+  }
+}
+
+void playLevelUp() {
+  tone(SPEAKER_PIN, 1000, 80);
+  delay(90);
+  tone(SPEAKER_PIN, 1500, 120);
+}
+
 // --- Проверка кнопки ---
 bool isButtonPressed(int rowPin, int colPin) {
   for (int r : rows) digitalWrite(r, HIGH);
@@ -128,27 +148,6 @@ void spawnBlock() {
   Point test[4];
   if (!getBlocks(current, pos, rot, test)) gameOver = true;
   else placeBlock(current, pos, rot, true);
-}
-
-void clearLines() {
-  for (int y = heightBlocks - 1; y >= 0; y--) {
-    bool full = true;
-    for (int x = 0; x < widthBlocks; x++)
-      if (!screen[x][y]) full = false;
-    if (full) {
-      for (int yy = y; yy > 0; yy--)
-        for (int x = 0; x < widthBlocks; x++)
-          screen[x][yy] = screen[x][yy - 1];
-      for (int x = 0; x < widthBlocks; x++) screen[x][0] = 0;
-      linesCleared++;
-      score += 100;
-      if (linesCleared % 100 == 0 && level < 10) {
-        level++;
-        fallDelay = max(200, 2000 - (level - 1) * 200);
-      }
-      y++;
-    }
-  }
 }
 
 bool canMove(int dx, int dy) {
@@ -245,7 +244,16 @@ void loop() {
     if (canMove(0, 1)) pos.y++;
     else {
       placeBlock(current, pos, rot, true);
-      clearLines();
+      int cleared = clearLinesLogic();
+      if (cleared > 0) {
+        int prevLevel = level;
+        score += scoreForLines(cleared);
+        linesCleared += cleared;
+        level = levelForLines(linesCleared);
+        fallDelay = fallDelayForLevel(level);
+        if (cleared == 4) playTetris(); else if (cleared > 0) playLineClear();
+        if (level != prevLevel) playLevelUp();
+      }
       drawInfoPanel();
       spawnBlock();
       playDrop();
